@@ -12,6 +12,7 @@ class Game(pyglet.window.Window):
         self.size = self.get_size()
         self.main_batch = pyglet.graphics.Batch()
         self.on_draw = self.event(self.on_draw)
+        self.joystick = self.get_joystick()
         self.load_assets()
         
     def load_assets(self):
@@ -42,8 +43,6 @@ class Game(pyglet.window.Window):
         if symbol == key.ESCAPE:
             self.close()
         if symbol == key.W:
-            
-            #print(self.drone.vel_vector)
             self.drone.vel_vector[1] += self.drone.speed
             
         if symbol == key.A:
@@ -66,6 +65,39 @@ class Game(pyglet.window.Window):
     def update(self,dt):
         for obj in self.game_object:
             obj.update(dt)
+
+    def get_joystick(self):
+        joysticks = pyglet.input.get_joysticks()
+        if joysticks:
+            self.joystick = joysticks[0]
+        self.joystick.open(self,True)
+        self.joystick.push_handlers(self.on_joybutton_press,self.on_joyaxis_motion)
+        print("loaded")
+    
+    def on_joybutton_press(self,joystick, button):
+        print("hello world")
+        print(button)
+        if button == "new":
+            if self.visible == True:
+                self.visible = False
+            else:
+                self.visible = True
+        if button == 1:
+            self.background.toggle_visibility()
+        if button == 2:
+            self.close()
+        if button == 3:
+            self.player_vector.toggle_visibility()
+            
+    def on_joyaxis_motion(self,joystick, axis, value):
+        x = joystick.x * 255
+        y = joystick.y * 255
+        self.drone.vel_vector[0] = 0
+        self.drone.vel_vector[1] = 0
+        if abs(x) > 100 or   abs(y) > 100:
+            
+            self.drone.vel_vector[0] =  int(x)
+            self.drone.vel_vector[1] = -int(y)
 
 
         

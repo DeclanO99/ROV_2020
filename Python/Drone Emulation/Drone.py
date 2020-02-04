@@ -28,18 +28,19 @@ class Drone(pyglet.sprite.Sprite):
         motor_thrust = 0
         horz = None
         vert = None
+        dead_zone = 100
         
         direction = [0,0,0,0]
-        if self.vel_vector[0] >=50:#right
+        if self.vel_vector[0] >=dead_zone:#right
             horz = [-1,-1,1,1]
             motor_thrust = (abs(self.vel_vector[0])/255)*300
-        elif self.vel_vector[0] <=-50:#left
+        elif self.vel_vector[0] <=-dead_zone:#left
             horz = [1,1,-1,-1]
             motor_thrust = (abs(self.vel_vector[0])/255)*300
-        if self.vel_vector[1] >=50:#up
+        if self.vel_vector[1] >=dead_zone:#up
             vert = [-1,1,-1,1]
             motor_thrust = (abs(self.vel_vector[1])/255)*300
-        elif self.vel_vector[1] <=-50:#down
+        elif self.vel_vector[1] <=-dead_zone:#down
             vert = [1,-1,1,-1]
             motor_thrust = (abs(self.vel_vector[1])/255)*300
         if horz != None and vert!= None:
@@ -57,10 +58,10 @@ class Drone(pyglet.sprite.Sprite):
         for i in range(len(self.thrusters)):
             self.thrusters[i].update(motor_thrust,direction[i],dt)
         self.Joystick_input.text = f"Joystick Input: {self.vel_vector}"
-        self.motor_A.text = f"Motor A Output: {motor_thrust * self.thrust_A.state} State :{self.thrust_A.state}"
-        self.motor_B.text = f"Motor B Output: {motor_thrust * self.thrust_B.state} State :{self.thrust_B.state}"
-        self.motor_C.text = f"Motor C Output: {motor_thrust * self.thrust_C.state} State :{self.thrust_C.state}"
-        self.motor_D.text = f"Motor D Output: {motor_thrust * self.thrust_D.state} State :{self.thrust_D.state}"
+        self.motor_A.text = f"Motor A Output: {int(motor_thrust * self.thrust_A.state)} State :{self.thrust_A.state}"
+        self.motor_B.text = f"Motor B Output: {int(motor_thrust * self.thrust_B.state)} State :{self.thrust_B.state}"
+        self.motor_C.text = f"Motor C Output: {int(motor_thrust * self.thrust_C.state)} State :{self.thrust_C.state}"
+        self.motor_D.text = f"Motor D Output: {int(motor_thrust * self.thrust_D.state)} State :{self.thrust_D.state}"
 
         #print(direction)
         
@@ -128,7 +129,7 @@ class Thruster(pyglet.sprite.Sprite):
         self.b_roation = rotation +180
 
     def update(self,motor_thrust,sign,dt):
-        if motor_thrust *sign>0:
+        if motor_thrust * sign>0:
             self.image = self.forward
             self.rotation = self.b_roation
         elif motor_thrust * sign < 0:
