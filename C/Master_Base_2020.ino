@@ -62,24 +62,23 @@ void read_PS2(){
   RY = fix_input(RY);
   RX = fix_input(RX);
 
-  if ( ps2x.ButtonPressed(PSB_L2)){
+  L2P = ps2x.ButtonPressed(PSB_L2);
+  R2P = ps2x.ButtonPressed(PSB_R2);
+  L2R = ps2x.ButtonReleased(PSB_L2);
+  R2R = ps2x.ButtonReleased(PSB_R2);
+  
+  if ( L2P ){
     movementY = -1;
   }
-  else if ( ps2x.ButtonReleased(PSB_L2)){
+  else if ( L2R ){
     movementY = 0;
   }
-  else if ( ps2x.ButtonPressed(PSB_L2) && ps2x.ButtonPressed(PSB_R2) ){
-     movementY = 0;
- }
-  if (ps2x.ButtonPressed(PSB_R2)){
+  if ( R2P ){
     movementY = 1;
   }
-  else if (ps2x.ButtonReleased(PSB_R2)){
+  else if ( R2R ){
     movementY = 0;
   }
-    else if ( ps2x.ButtonPressed(PSB_L2) && ps2x.ButtonPressed(PSB_R2) ){
-     movementY = 0;
- }
  Serial.print(movementY);
  }
 
