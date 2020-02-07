@@ -17,11 +17,12 @@ PS2X ps2x;
 
 int timer1;
 int timer2;
-int A,B,C,D,E,F, twist, vertical, LY, LX, RY, RX, movementX, movementY;
+int A,B,C,D,E,F, twist, vertical, LY, LX, RY, RX, movementY;
 const byte arraylength = 6, middle = 0, deadzone = 20;
 byte message[arraylength], packetBuffer[arraylength], offset = 10;
 int left_magnitude, right_magnitude,  mag, temperature, i;
 float temp, pH;
+bool L2P, L2R, R2P, R2R;
 
 void setup() {  
   Serial.begin(9600);//allows serial moniter
@@ -40,10 +41,10 @@ void loop() {
 //slave_data();   //prints out data from the temp and pH sensor when the triangle button is pushed  
   read_PS2();     //reads the PS2 values and adjusts the analog stick values to useful ranges
 //adjust_thrust();//adjusts thrust according to the D-pad
-  motor_values(); //converts PS2 vectors into values for the speed controllers
+//  motor_values(); //converts PS2 vectors into values for the speed controllers
   fillmessage();  //fills the array that is to be sent
   sendmessage();  //sends the array to the slave arduino
-  print_sent(); //prints out all the information to be sent in the array
+//  print_sent(); //prints out all the information to be sent in the array
   delay(50);
 }
 
@@ -60,7 +61,28 @@ void read_PS2(){
   LX = fix_input(LX);
   RY = fix_input(RY);
   RX = fix_input(RX);
-}
+
+  if ( ps2x.ButtonPressed(PSB_L2)){
+    movementY = -1;
+  }
+  else if ( ps2x.ButtonReleased(PSB_L2)){
+    movementY = 0;
+  }
+  else if ( ps2x.ButtonPressed(PSB_L2) && ps2x.ButtonPressed(PSB_R2) ){
+     movementY = 0;
+ }
+  if (ps2x.ButtonPressed(PSB_R2)){
+    movementY = 1;
+  }
+  else if (ps2x.ButtonReleased(PSB_R2)){
+    movementY = 0;
+  }
+    else if ( ps2x.ButtonPressed(PSB_L2) && ps2x.ButtonPressed(PSB_R2) ){
+     movementY = 0;
+ }
+ Serial.print(movementY);
+ }
+
 
 
 void motor_values(){ //this converts the controller input into the needed values for each thruster
@@ -109,6 +131,7 @@ void sendmessage(){//sends the message
 
 void print_sent(){
   Serial.println();
+  Serial.print(movementY);
   for(i = 0; i < arraylength-1 ; i++){
     Serial.print(message[i]);
     Serial.print(" ");
