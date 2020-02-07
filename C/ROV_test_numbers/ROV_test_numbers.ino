@@ -81,9 +81,52 @@ int swap(int controller_value){//switches the values from 255-0 to 0-255
   return controller_value;
 }
 
-int check_deadzone(int controller_value, int inverse){//if toggle is in deadband it sets the value to 0(middle variable)
+int min(int num1, int num2) 
+{
+    return (num1 > num2 ) ? num2 : num1;
+}
+int check_deadzone(int LX, int LY){//if toggle is in deadband it sets the value to 0(middle variable)
   //returns the middle of the possible controller value if the controller value isn't past the deadzone area
   //Essentially making it so small unwanted movements in the controller won't cause the thrusters to move
+  int motor_thrust = 0;
+  int horz = null;
+  int vert = null;
+  int dead_zone = 100;
+  char* direct = [null,null,null,null]
+  if (LX >= dead_zone){//Right
+    horz = 3
+    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  } 
+  else if (LX <= -dead_zone){//Right
+    horz = 12
+    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  } 
+  if (LY >= dead_zone){//Right
+    vert = 5
+    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  } 
+  else if (LY <= -dead_zone){//Right
+    horz = 12
+    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  } 
+  if (horz != null and vert == null){
+    for (i = 0;i<4; i++){
+      direct[i] = !!(horz & (1<<(3-i)))
+  }
+  else if (vert != null and horz == null){
+    for (i = 0;i<4; i++){
+      direct[i] = !!(vert & (1<<(3-i)))
+  }
+  if (horz != null and vert != null){
+    for (i = 0;i<4; i++){
+      if (vert & (1<<(3-i)) == horz & (1<<(3-i))){
+        direct[i] = !!(horz & (1<<(3-i)))
+      }else if {
+        direct[i] = null;
+        }
+    }
+  }
+  
   return (controller_value * 2 - 255) * inverse; 
 }
 void print_sent(){
@@ -97,11 +140,14 @@ void print_sent(){
   //Serial.println(movementY);
   //Serial.println(movementX);
   //Serial.println(LX,"x");
-  if (abs(LX) >=50  || abs(LY) >= 50){
-    Serial.println(" ");
-    Serial.print(LX);
-    Serial.print(",");
-    Serial.print(LY);
+  
+    if (LX>0):
+      
+      
+   //Serial.println(" ");
+    //Serial.print(LX);
+    //Serial.print(",");
+    //Serial.print(LY);
  // Serial.println(RX);
   }
 }
