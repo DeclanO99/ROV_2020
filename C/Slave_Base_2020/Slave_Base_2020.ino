@@ -55,25 +55,26 @@ void loop()
 { 
   recieve();        //recieves the array and puts it inside 
   //print_recieved(); // diagnostic tool to see the values being sent to the slave arduino
-  thrusters();   //takes the data from the array and sends out the respective pulse to the individual ESC's
+  set_thrusters();   //takes the data from the array and sends out the respective pulse to the individual ESC's
   //print_values(); //diagnostic tool to see the motor values being output to the motor ESC's
   delay(50);
 
 }
+
 void recieve(){//recieves data from ethernet and puts it in packetBuffer array
   int packetSize = Udp.parsePacket();
   IPAddress remote = Udp.remoteIP();
   Udp.read(packetBuffer,UDP_TX_PACKET_MAX_SIZE);
   
-  a = packetBuffer[0];
-  b = packetBuffer[1];
-  c = packetBuffer[2];
-  d = packetBuffer[3];
-  e = packetBuffer[4];
-  f = packetBuffer[5];
+  a = packetBuffer[4]*100;
+  b = packetBuffer[1]*100;
+  c = packetBuffer[2]*100;
+  d = packetBuffer[3]*100;
+  e = packetBuffer[0]*100;
+  f = packetBuffer[5]*100;
 }
 
-void thrusters(){
+void set_thrusters(){
   thrusterA.writeMicroseconds(a);
   thrusterB.writeMicroseconds(b);  
   thrusterC.writeMicroseconds(c);  

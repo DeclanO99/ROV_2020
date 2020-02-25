@@ -19,7 +19,8 @@ bool fry_release = false, mini_launch = false, mini_retract = false, tilt = fals
 int timer1;
 int timer2;
 int A,B,C,D,E,F, twist, vertical, LY, LX, RY, RX, movementX, movementY;
-const byte arraylength = 7, maximum = 255, minimum = 0, middle = 127, deadzone = 20, halt =1500;
+const byte arraylength = 7, maximum = 255, minimum = 0, middle = 127, deadzone = 20;
+const int NUTURAL =1500;
 byte message[arraylength], packetBuffer[arraylength], offset = 10;
 int left_magnitude, right_magnitude,  mag, temperature, i;
 float temp, pH;
@@ -55,80 +56,115 @@ void loop() {
   //print_recieved();//prints out the data that was recieved
   delay(50);
 }
-
+int fix_input(int controller_value, int invert){//checks to see if the analog stick is within a center range and if it is sets the value to 0 and if not simply remaps the input value
+    controller_value = (controller_value*2-255)*invert;
+  return controller_value;
+}
 void read_PS2(){
   ps2x.read_gamepad(); //Needs to be called at least once a second
   
-  LY = ps2x.Analog(PSS_LY); //left Stick Up and Down  //Analog Stick readings
-  LX = ps2x.Analog(PSS_LX); //Left Stick Left and Right // 0-255 return range
-  //RY = ps2x.Analog(PSS_RY); //Right Stick Up and Down
-  //RX = ps2x.Analog(PSS_RX); //Right Stick Left and Right
-  
-  LY = check_deadzone(LY,-1);//sets to middle if it's within dead zone
-  LX = check_deadzone(LX,1);
-//  RY = check_deadzone(RY);
-//  RX = check_deadzone(RX);
-  
-  //LY = swap(LY);
-  //RY = swap(RY);
-//  left_magnitude = magnitude(LY, LX);
-}
-int swap(int controller_value){//switches the values from 255-0 to 0-255
-  controller_value = abs(controller_value - maximum)-1;
-  if(controller_value<0){
-    controller_value=0;
+  LY = fix_input(ps2x.Analog(PSS_LY),-1); //left Stick Up and Down  //Analog Stick readings
+  LX = fix_input(ps2x.Analog(PSS_LX),1); //Left Stick Left and Right // 0-255 return range
+  LY = get_direction(LX,LY);//sets to middle if it's within dead zone
+
+
+  if ( ps2x.ButtonPressed(PSB_L2)){
+    movementY = -1;
   }
-  return controller_value;
+  else if ( ps2x.ButtonReleased(PSB_L2)){
+    movementY = 0;
+  }
+ 
+ 
+  if (ps2x.ButtonPressed(PSB_R2)){
+    movementY = 1;
+  }
+  else if (ps2x.ButtonReleased(PSB_R2)){
+    movementY = 0;
+  }
+  
+  if ( ps2x.ButtonPressed(PSB_L2) && ps2x.ButtonPressed(PSB_R2) ){
+     movementY = 0;
+ }
+ //Serial.println(movementY);
+ 
 }
 
-int min(int num1, int num2) 
+int lowest(int num1, int num2) 
 {
     return (num1 > num2 ) ? num2 : num1;
 }
-int check_deadzone(int LX, int LY){//if toggle is in deadband it sets the value to 0(middle variable)
+
+int joystick2thrust(int value, int sign){
+  int thrust = value;
+  if (sign == 0){
+     thrust = thrust * -1;
+  }
+  thrust = thrust + NUTURAL;
+  return thrust;
+}
+//int tilt(int RY){}
+
+int get_direction(int LX, int LY){//if toggle is in deadband it sets the value to 0(middle variable)
   //returns the middle of the possible controller value if the controller value isn't past the deadzone area
   //Essentially making it so small unwanted movements in the controller won't cause the thrusters to move
   int motor_thrust = 0;
-  int horz = null;
-  int vert = null;
+  int horz = NULL;
+  int vert = NULL;
   int dead_zone = 100;
-  char* direct = [null,null,null,null]
+  int direct[4] = {NUTURAL,NUTURAL,NUTURAL,NUTURAL};
+  
   if (LX >= dead_zone){//Right
-    horz = 3
-    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+    horz = 3;
   } 
-  else if (LX <= -dead_zone){//Right
-    horz = 12
-    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  else if (LX <= -dead_zone){//Left
+    horz = 12;
   } 
-  if (LY >= dead_zone){//Right
-    vert = 5
-    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  if (LY >= dead_zone){//Up
+    vert = 5;
   } 
-  else if (LY <= -dead_zone){//Right
-    horz = 12
-    motor_thrust = (min(abs(self.vel_vector[0]),200)/200)*300
+  else if (LY <= -dead_zone){//Down
+    vert = 10;
   } 
-  if (horz != null and vert == null){
-    for (i = 0;i<4; i++){
-      direct[i] = !!(horz & (1<<(3-i)))
+  if (abs(LX)<abs(LY)){
+    motor_thrust = (min(abs(LY),200)/(float)200)*300;
+  }else{
+     //Serial.println(LX);
+    motor_thrust = (min(abs(LX),200)/(float)200)*300;
   }
-  else if (vert != null and horz == null){
+  
+  if (horz != NULL and vert == NULL){
     for (i = 0;i<4; i++){
-      direct[i] = !!(vert & (1<<(3-i)))
+      direct[i] = joystick2thrust(motor_thrust,!!(horz & (1<<(3-i))));
+      }
   }
-  if (horz != null and vert != null){
+  else if (vert != NULL and horz == NULL){
     for (i = 0;i<4; i++){
-      if (vert & (1<<(3-i)) == horz & (1<<(3-i))){
-        direct[i] = !!(horz & (1<<(3-i)))
-      }else if {
-        direct[i] = null;
+      direct[i] = joystick2thrust(motor_thrust,!!(vert & (1<<(3-i))));
+      }
+  }
+  if (horz != NULL and vert != NULL){
+    for (i = 0;i<4; i++){
+      if ((vert & (1<<(3-i))) == (horz & (1<<(3-i)))){
+        direct[i] = !!(horz & (1<<(3-i)));
+        direct[i] = joystick2thrust(motor_thrust,!!(horz & (1<<(3-i))));
+        
+      }else {
+        direct[i] = NUTURAL;
         }
     }
   }
+ 
+ 
   
-  return (controller_value * 2 - 255) * inverse; 
+  Serial.println(direct[0]);
+  Serial.println(direct[1]);
+  Serial.println(direct[2]);
+  Serial.println(direct[3]);
+  Serial.println("");
+  
 }
+ 
 void print_sent(){
   /*
   Serial.println();
@@ -141,13 +177,13 @@ void print_sent(){
   //Serial.println(movementX);
   //Serial.println(LX,"x");
   
-    if (LX>0):
-      
+    
+   
       
    //Serial.println(" ");
     //Serial.print(LX);
     //Serial.print(",");
     //Serial.print(LY);
  // Serial.println(RX);
-  }
+  
 }
