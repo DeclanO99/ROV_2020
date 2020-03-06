@@ -19,11 +19,12 @@ int A,B,C,D,E,F, twist, vertical, LY, LX, RY, RX, movementX, movementY;
 const byte arraylength = 7, DEAD_ZONE = 100,EMPTY = -1;
 const int MOTOR_NUTURAL = 1500, MOTOR_REVERSE = 1200, MOTOR_FORWARD = 1800;
 
-int motor_values[4]={MOTOR_NUTURAL,MOTOR_NUTURAL,MOTOR_NUTURAL,MOTOR_NUTURAL};
-int z_axis_motors[2] = {MOTOR_NUTURAL,MOTOR_NUTURAL};
+int motor_values[4] = {MOTOR_NUTURAL, MOTOR_NUTURAL, MOTOR_NUTURAL, MOTOR_NUTURAL};
+int z_axis_motors[2] = {MOTOR_NUTURAL, MOTOR_NUTURAL};
 byte message[arraylength], packetBuffer[arraylength], offset = 10;
 int left_magnitude, right_magnitude,  mag, temperature, i;
 float temp, pH;
+
 
 void setup() {  
   Serial.begin(9600);//allows serial moniter
@@ -42,7 +43,7 @@ void loop() {
 //slave_data();   //prints out data from the temp and pH sensor when the triangle button is pushed  
   read_PS2();     //reads the PS2 values and adjusts the analog stick values to useful ranges
 //adjust_thrust();//adjusts thrust according to the D-pad
-  get_motor_values(); //converts PS2 vectors into values for the speed controllers
+  get_xy_axis(); //converts PS2 vectors into values for the speed controllers
   
   get_z_axis();
   //get_rotation();
@@ -54,6 +55,7 @@ void loop() {
   print_sent(); //prints out all the information to be sent in the array
   //delay(600);
 }
+
 int fix_input(int controller_value, int invert){//checks to see if the analog stick is within a center range and if it is sets the value to 0 and if not simply remaps the input value
     controller_value = (controller_value*2-255)*invert;
   return controller_value;
@@ -66,21 +68,36 @@ void read_PS2(){
   LX = fix_input(ps2x.Analog(PSS_LX),1); //Left Stick Left and Right
   RY = fix_input(ps2x.Analog(PSS_RY),1); //Right Stick Up and Down
   RX = fix_input(ps2x.Analog(PSS_RX),1); //Right Stick Left and Right
-  
 }
 
 
-//temp change
-int joystick2thrust(int value, int sign){
-  int thrust = value;
-  if (sign == 0){
-     thrust = thrust * -1;
+
+int joystick2thrust(int LX, int LY, int sign){
+  /*convert joystick value range from 250: -255 to 1800:1200
+  */
+  int motor_thrust = 0;
+  int clamp_range = 200;//restrict size
+  int speed_control = 300;//denominator 
+  int motor_base = 300;// motor max if we subtract motor nutural from motor forward
+  
+  
+  if (abs(LX)<abs(LY)){
+    motor_thrust = (min(abs(LY),clamp_range)/(float)speed_control)*motor_base;
+  }else{
+     
+    motor_thrust = (min(abs(LX),clamp_range)/(float)speed_control)*motor_base;
   }
-  thrust = thrust + MOTOR_NUTURAL;
-  return thrust;
+
+  if (sign == 0){
+     motor_thrust = motor_thrust * -1;
+  }
+  motor_thrust = motor_thrust + MOTOR_NUTURAL;
+  return motor_thrust;
 }
 
 void get_rotation(){
+  /*Rotate ROV by setting all motors to either forward or reverse
+  */
   if (RX >= DEAD_ZONE){
     motor_values[0] = MOTOR_FORWARD;
     motor_values[1] = MOTOR_FORWARD;
@@ -93,29 +110,40 @@ void get_rotation(){
     motor_values[3] = MOTOR_REVERSE;
   }
 }
+
 void get_tilt(){
-  if (RY >= DEAD_ZONE){
-    z_axis_motors[0] = MOTOR_FORWARD;
-    z_axis_motors[1] = MOTOR_FORWARD;
+  /*tilt ROV based on right joystick y direction 
+  */
+  if (RY >= DEAD_ZONE){//tilt forward
     
-  }else if (RY <= -DEAD_ZONE){
     z_axis_motors[0] = MOTOR_REVERSE;
     z_axis_motors[1] = MOTOR_REVERSE;
+    
+  }else if (RY <= -DEAD_ZONE){//tilt backwards
+    z_axis_motors[0] = MOTOR_FORWARD;
+    z_axis_motors[1] = MOTOR_FORWARD;
    
   }
  }
 
 void get_z_axis(){
+  /*Set z axis motors to increase/decrease rov height. 
+    Set nutural if both are active.
+  */
   z_axis_motors[0] = MOTOR_NUTURAL;
   z_axis_motors[1] = MOTOR_NUTURAL;
+
+  //Rov Down 
   if ( ps2x.Button(PSB_L2)){
-    z_axis_motors[0] = MOTOR_FORWARD;
-    z_axis_motors[1] = MOTOR_REVERSE;
-  }
-  if (ps2x.Button(PSB_R2)){
     z_axis_motors[0] = MOTOR_REVERSE;
     z_axis_motors[1] = MOTOR_FORWARD;
   }
+  //Rov Up
+  if (ps2x.Button(PSB_R2)){
+    z_axis_motors[0] = MOTOR_FORWARD;
+    z_axis_motors[1] = MOTOR_REVERSE;
+  }
+  //Zero if both are active
   if ( ps2x.Button(PSB_L2) && ps2x.Button(PSB_R2) ){
      z_axis_motors[0] = MOTOR_NUTURAL;
      z_axis_motors[1] = MOTOR_NUTURAL;
@@ -123,52 +151,60 @@ void get_z_axis(){
  //Serial.println(z_axis_motors[0]);
 }
 
-void get_motor_values(){ //this converts the controller input into the needed values for each thruster
-
+void get_xy_axis(){ //this converts the controller input into the needed values for each thruster
+  /*
+  */
   int motor_thrust = 0;
   int horz = EMPTY;
   int vert = EMPTY;
-  
   motor_values[0] = MOTOR_NUTURAL ;
   motor_values[1] = MOTOR_NUTURAL ;
   motor_values[2] = MOTOR_NUTURAL ;
   motor_values[3] = MOTOR_NUTURAL ;
   
+  //set appropriate numbers for binary math
   if (LX >= DEAD_ZONE){//Right
-    horz = 3;
+    horz = 3;// 3 = 0011
   } 
   else if (LX <= -DEAD_ZONE){//Left
-    horz = 12;
+    horz = 12;// 12 = 1100
   } 
-  if (LY >= DEAD_ZONE){//Up
-    vert = 5;
+  if (LY >= DEAD_ZONE){//Forward
+    vert = 5;//5 = 0101
   } 
-  else if (LY <= -DEAD_ZONE){//Down
-    vert = 10;
+  else if (LY <= -DEAD_ZONE){//Backward
+    vert = 10;//10 = 1010
   } 
-  if (abs(LX)<abs(LY)){
-    motor_thrust = (min(abs(LY),200)/(float)200)*300;
-  }else{
-     //Serial.println(LX);
-    motor_thrust = (min(abs(LX),200)/(float)200)*300;
-  }
-  
+
+  // set motor value to
+ 
   if (horz != EMPTY and vert == EMPTY){
     for (i = 0;i<4; i++){
-      motor_values[i] = joystick2thrust(motor_thrust,!!(horz & (1<<(3-i))));
+      motor_values[i] = joystick2thrust(LX,LY,!!(horz & (1<<(3-i))));
       }
   }
   else if (vert != EMPTY and horz == EMPTY){
     for (i = 0;i<4; i++){
-      motor_values[i] = joystick2thrust(motor_thrust,!!(vert & (1<<(3-i))));
+      motor_values[i] = joystick2thrust(LX,LY,!!(vert & (1<<(3-i))));
       }
   }
   if (horz != EMPTY and vert != EMPTY){
     for (i = 0;i<4; i++){
       if ((vert & (1<<(3-i))) == (horz & (1<<(3-i)))){
         motor_values[i] = !!(horz & (1<<(3-i)));
-        motor_values[i] = joystick2thrust(motor_thrust,!!(horz & (1<<(3-i))));
-        
+        motor_values[i] = joystick2thrust(LX,LY,!!(horz & (1<<(3-i))));
+        if (vert == 5 and horz == 3){//forward right
+          motor_values[0] =  motor_values[0];
+        }
+        if (vert == 5 and horz == 12){//forward left
+          motor_values[1] =  motor_values[1];
+        }
+        if (vert == 10 and horz == 3){//backwards right
+          motor_values[2] =  motor_values[2];
+        }
+        if (vert == 10 and horz == 12){//backwards left
+          motor_values[3] =  motor_values[3];
+        }
       }else {
         motor_values[i] = MOTOR_NUTURAL;
         }
@@ -186,6 +222,7 @@ void adjust_thrust(){//sets the thruster adjust variable if the up or down butto
       offset = 10;
     }
   }
+
   if(ps2x.ButtonPressed(PSB_PAD_DOWN)){
     offset --;
     if(offset<0){
